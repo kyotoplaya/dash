@@ -12,7 +12,7 @@ import (
 
 type weather string
 
-func tickWeather() tea.Cmd {
+func collectWeather() weather {
 	url := "https://wttr.in/Oryol?0?Q"
 
 	client := &http.Client{}
@@ -40,7 +40,18 @@ func tickWeather() tea.Cmd {
 		os.Exit(1)
 	}
 
-	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
-		return weather(body)
+	return weather(body)
+}
+
+func fetchWeather() tea.Cmd {
+	return func() tea.Msg {
+		return collectWeather()
+	}
+}
+
+func tickWeather() tea.Cmd {
+
+	return tea.Tick(time.Hour, func(t time.Time) tea.Msg {
+		return collectWeather()
 	})
 }

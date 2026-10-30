@@ -26,6 +26,7 @@ func initialModel() model {
 			{name: "Clock", body: "--:--:--"},
 			{name: "Random", body: "--"},
 			{name: "Weather", body: "--"},
+			{name: "Hardware", body: "--"},
 		},
 
 		focus: 0,
@@ -33,7 +34,12 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(tickClock(), tickRandom(), tickWeather()) // Запускаем последующие тики каждую секунду, каждые 3 секунды и каждый час
+	return tea.Batch(
+		fetchClock(),
+		fetchRandom(),
+		fetchWeather(),
+		fetchHardware(),
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -53,7 +59,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Width = msg.Width
 		m.Height = msg.Height
 
-	case clockMsg:
+	case clock:
 		m.time = time.Time(msg)
 		cmd = tickClock() // Запускаем последующие тики каждую секунду
 		m.panels[0].body = m.time.Format("15:04:05")
@@ -64,7 +70,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case weather:
 		m.panels[2].body = string(msg)
-		cmd = tickWeather() // Запускаем последующие тики каждый час
+
+	case hardware:
+		m.panels[3].body = string(msg)
+		cmd = tickHardware() // Запускаем последующие тики каждые 5 секунд
 	}
 
 	return m, cmd

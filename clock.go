@@ -6,7 +6,17 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-type clockMsg time.Time
+type clock time.Time
+
+func collectClock() clock {
+	return clock(time.Now())
+}
+
+func fetchClock() tea.Cmd {
+	return func() tea.Msg {
+		return collectClock()
+	}
+}
 
 func tickClock() tea.Cmd {
 	now := time.Now()
@@ -18,6 +28,6 @@ func tickClock() tea.Cmd {
 	delay := time.Until(nextSecond)
 
 	return tea.Tick(delay, func(t time.Time) tea.Msg {
-		return clockMsg(t)
+		return clock(t)
 	})
 }

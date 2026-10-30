@@ -9,10 +9,19 @@ import (
 
 type random int
 
+func collectRandom() random {
+	return random(rand.IntN(100))
+}
+
+func fetchRandom() tea.Cmd {
+	return func() tea.Msg {
+		return collectRandom()
+	}
+}
+
 func tickRandom() tea.Cmd {
-	rnd := rand.IntN(100)
 
 	return tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
-		return random(rnd)
+		return collectRandom()
 	})
 }
