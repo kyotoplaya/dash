@@ -6,22 +6,12 @@ var defaultStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1
 var focusedStyle = lipgloss.NewStyle().Border(lipgloss.ThickBorder()).Padding(1, 2)
 
 type panel struct {
-	name  string
-	index int
+	name string
 }
 
-func (m model) getPanels(panels []panel) string {
-
-	panelViews := make([]string, len(m.panels))
-	for i, p := range m.panels {
-		style := defaultStyle
-		if i == m.focus {
-			style = focusedStyle
-		}
-		panelViews[i] = style.Render(p.name)
+func (p panel) View(focused bool, width, height int) string {
+	if focused {
+		return focusedStyle.Width(width).Height(height).Render(p.name)
 	}
-
-	panelsStr := lipgloss.JoinHorizontal(lipgloss.Top, panelViews...)
-
-	return panelsStr
+	return defaultStyle.Width(width).Height(height).Render(p.name)
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 /*MAIN MODEL*/
@@ -19,9 +20,9 @@ type model struct {
 func initialModel() model {
 	return model{
 		panels: []panel{
-			{name: "panel1", index: 0},
-			{name: "panel2", index: 1},
-			{name: "panel3", index: 2},
+			{name: "Panel 1"},
+			{name: "Panel 2"},
+			{name: "Panel 3"},
 		},
 		focus: 0,
 	}
@@ -51,10 +52,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
+	colWidth := m.Width / len(m.panels)
+	colHeight := m.Height / 4 // Set a fixed height for the panels
 
-	panelsStr := m.getPanels(m.panels)
+	views := make([]string, len(m.panels))
 
-	v := tea.NewView(panelsStr)
+	for i, p := range m.panels {
+		views[i] = p.View(i == m.focus, colWidth, colHeight)
+	}
+
+	panelsStr := lipgloss.JoinHorizontal(lipgloss.Top, views...)
+	sizeStr := fmt.Sprintf("Window Size: %dx%d", m.Width, m.Height)
+	footerStr := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Press 'q' to quit. Press 'tab' to switch focus.")
+
+	vStr := lipgloss.JoinVertical(lipgloss.Left, panelsStr, sizeStr, footerStr)
+
+	v := tea.NewView(vStr)
 	v.AltScreen = true
 	return v
 }
