@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -14,8 +15,9 @@ type model struct {
 	Width  int
 	Height int
 
-	panels []panel
-	focus  int
+	panels          []panel
+	maxPanelsPerRow int
+	focus           int
 
 	time time.Time
 }
@@ -28,8 +30,8 @@ func initialModel() model {
 			{name: "Weather", body: "--"},
 			{name: "Hardware", body: "--"},
 		},
-
-		focus: 0,
+		maxPanelsPerRow: 3,
+		focus:           0,
 	}
 }
 
@@ -80,24 +82,40 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	colHeight := m.Height / 4 // задаем высоту каждой панели как четверть высоты окна
-	baseWidth := m.Width / len(m.panels)
+	const panelOverhead = 2
 
-	rem := m.Width % len(m.panels)
+	footerStr := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Press 'q' to quit. Press 'tab' to switch focus.")
+
+	colWidth := m.Width / m.maxPanelsPerRow
 
 	views := make([]string, len(m.panels))
 
+	rowsCount := (len(m.panels) + m.maxPanelsPerRow - 1) / m.maxPanelsPerRow
+
+	footerHeight := strings.Count(footerStr, "\n")
+	colHeight := (m.Height-footerHeight)/rowsCount - panelOverhead
+
+	rem := m.Width % m.maxPanelsPerRow
+
 	for i, p := range m.panels {
-		colWidth := baseWidth
-		if i < rem {
-			colWidth++ // раздать остаток (свободные пиксели) первым панелям, чтобы они были равномерно распределены
+		w := colWidth
+		if i%m.maxPanelsPerRow < rem {
+			w++ // раздать остаток (свободные пиксели) первым панелям, чтобы они были равномерно распределены
 		}
-		views[i] = p.View(i == m.focus, colWidth, colHeight)
+
+		views[i] = p.View(i == m.focus, w, colHeight)
 
 	}
 
-	panelsStr := lipgloss.JoinHorizontal(lipgloss.Top, views...)
-	footerStr := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Press 'q' to quit. Press 'tab' to switch focus.")
+	var panels []string
+	step := 0
+	for i := m.maxPanelsPerRow; i <= len(views); i += m.maxPanelsPerRow {
+		panels = append(panels, lipgloss.JoinHorizontal(lipgloss.Top, views[step:i]...))
+		step += m.maxPanelsPerRow
+	}
+
+	panels = append(panels, lipgloss.JoinHorizontal(lipgloss.Top, views[step:]...))
+	panelsStr := lipgloss.JoinVertical(lipgloss.Top, panels...)
 
 	vStr := lipgloss.JoinVertical(lipgloss.Left, panelsStr, footerStr)
 
