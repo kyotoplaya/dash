@@ -2,26 +2,17 @@ package main
 
 import (
 	"math/rand/v2"
+	"strconv"
 	"time"
-
-	tea "charm.land/bubbletea/v2"
 )
 
-type random int
+type randomModule struct{}
 
-func collectRandom() random {
-	return random(rand.IntN(100))
+func (randomModule) Name() string { return "Random" }
+func (randomModule) Collect() (string, error) {
+	randomNumber := rand.IntN(100)
+	return "Random Number: " + strconv.Itoa(randomNumber), nil
 }
-
-func fetchRandom() tea.Cmd {
-	return func() tea.Msg {
-		return collectRandom()
-	}
-}
-
-func tickRandom() tea.Cmd {
-
-	return tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
-		return collectRandom()
-	})
+func (randomModule) Interval() time.Duration {
+	return 5 * time.Second
 }

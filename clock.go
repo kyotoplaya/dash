@@ -1,33 +1,20 @@
 package main
 
-import (
-	"time"
+import "time"
 
-	tea "charm.land/bubbletea/v2"
-)
+type clockModule struct{}
 
-type clock time.Time
-
-func collectClock() clock {
-	return clock(time.Now())
+func (clockModule) Name() string { return "Clock" }
+func (clockModule) Collect() (string, error) {
+	return time.Now().Format("15:04:05"), nil
 }
-
-func fetchClock() tea.Cmd {
-	return func() tea.Msg {
-		return collectClock()
-	}
-}
-
-func tickClock() tea.Cmd {
+func (clockModule) Interval() time.Duration {
 	now := time.Now()
 
 	// Находим точное время начала СЛЕДУЮЩЕЙ системной секунды
 	nextSecond := now.Truncate(time.Second).Add(time.Second)
 
-	// time.Until посчитает, сколько миллисекунд осталось до этого момента
 	delay := time.Until(nextSecond)
 
-	return tea.Tick(delay, func(t time.Time) tea.Msg {
-		return clock(t)
-	})
+	return time.Second - delay // Возвращаем оставшееся время до следующей секунды
 }

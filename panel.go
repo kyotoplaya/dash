@@ -11,7 +11,7 @@ type panel struct {
 }
 
 func (p panel) View(focused bool, width, height int) string {
-	panelStr := lipgloss.NewStyle().Render(lipgloss.JoinVertical(lipgloss.Top, p.name, p.body))
+	panelStr := lipgloss.JoinVertical(lipgloss.Top, p.name, p.body)
 
 	if focused {
 		return focusedStyle.Width(width).Height(height).Render(panelStr)

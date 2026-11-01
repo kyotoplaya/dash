@@ -7,11 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	tea "charm.land/bubbletea/v2"
 )
 
-type hardware string
+type hardwareModule struct{}
 
 func getCpuTemp() (string, error) {
 	psCommand := `
@@ -168,7 +166,8 @@ func getRAMMetrics() (float64, float64, error) {
 	return used, total, nil
 }
 
-func collectHardware() hardware {
+func (hardwareModule) Name() string { return "Hardware" }
+func (hardwareModule) Collect() (string, error) {
 	cpuTemp, err := getCpuTemp()
 	if err != nil {
 		cpuTemp = "N/A"
@@ -201,18 +200,8 @@ func collectHardware() hardware {
 	}
 
 	hwStr := fmt.Sprintf("CPU Temp: %s°C\nCPU Usage: %s%%\nGPU Temp: %s\nGPU Load: %s%%\nVRAM Usage: %s\nRAM Usage: %.1f/%.1f GB", cpuTemp, cpuUsage, gpuTemp, gpuCoreLoad, gpuVramUsage, usedRAM, totalRAM)
-	return hardware(hwStr)
+	return hwStr, nil
 }
-
-func fetchHardware() tea.Cmd {
-	return func() tea.Msg {
-		return collectHardware()
-	}
-}
-
-func tickHardware() tea.Cmd {
-
-	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-		return collectHardware()
-	})
+func (hardwareModule) Interval() time.Duration {
+	return 5 * time.Second
 }

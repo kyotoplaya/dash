@@ -4,22 +4,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
-
-	tea "charm.land/bubbletea/v2"
 )
 
-type weather string
+type weatherModule struct{}
 
-func collectWeather() weather {
+func (weatherModule) Name() string { return "Weather" }
+func (weatherModule) Collect() (string, error) {
 	url := "https://wttr.in/Oryol?0?Q"
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Printf("Ошибка создания запроса: %v\n", err)
-		os.Exit(1)
+		return "Ошибка создания запроса", err
 	}
 
 	// Обязательно выставляем User-Agent как у curl, чтобы получить чистый текст
@@ -29,7 +27,7 @@ func collectWeather() weather {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Ошибка выполнения запроса: %v\n", err)
-		os.Exit(1)
+		return "Ошибка выполнения запроса", err
 	}
 	defer resp.Body.Close()
 
@@ -37,21 +35,12 @@ func collectWeather() weather {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("Ошибка чтения ответа: %v\n", err)
-		os.Exit(1)
+		return "Ошибка чтения ответа", err
 	}
 
-	return weather(body)
+	return string(body), nil
 }
 
-func fetchWeather() tea.Cmd {
-	return func() tea.Msg {
-		return collectWeather()
-	}
-}
-
-func tickWeather() tea.Cmd {
-
-	return tea.Tick(time.Hour, func(t time.Time) tea.Msg {
-		return collectWeather()
-	})
+func (weatherModule) Interval() time.Duration {
+	return time.Hour // Обновляем раз в час
 }

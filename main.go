@@ -3,18 +3,30 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
+func slicePanels(slice []string, chunkSize int) [][]string {
+	var chunks [][]string
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+		if end > len(slice) {
+			end = len(slice)
+		}
+		chunks = append(chunks, slice[i:end])
+	}
+	return chunks
+}
+
 /*MAIN MODEL*/
 type model struct {
 	Width  int
 	Height int
 
+	modules         []Module
 	panels          []panel
 	maxPanelsPerRow int
 	focus           int
@@ -23,24 +35,36 @@ type model struct {
 }
 
 func initialModel() model {
+	modules := []Module{
+		weatherModule{},
+		clockModule{},
+		hardwareModule{},
+		randomModule{},
+	}
+
+	panels := []panel{}
+	for _, module := range modules {
+		p := panel{name: module.Name(), body: "Loading..."}
+		panels = append(panels, p)
+	}
+
 	return model{
-		panels: []panel{
-			{name: "Clock", body: "--:--:--"},
-			{name: "Random", body: "--"},
-			{name: "Weather", body: "--"},
-			{name: "Hardware", body: "--"},
-		},
-		maxPanelsPerRow: 3,
+		modules:         modules,
+		panels:          panels,
+		maxPanelsPerRow: 2,
 		focus:           0,
 	}
 }
 
 func (m model) Init() tea.Cmd {
+	cmds := []tea.Cmd{}
+
+	for _, module := range m.modules {
+		cmds = append(cmds, poll(module, 0)) // Запускаем первый тик сразу
+	}
+
 	return tea.Batch(
-		fetchClock(),
-		fetchRandom(),
-		fetchWeather(),
-		fetchHardware(),
+		cmds...,
 	)
 }
 
@@ -61,21 +85,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Width = msg.Width
 		m.Height = msg.Height
 
-	case clock:
-		m.time = time.Time(msg)
-		cmd = tickClock() // Запускаем последующие тики каждую секунду
-		m.panels[0].body = m.time.Format("15:04:05")
+	case moduleMsg:
+		for i, p := range m.panels {
+			if p.name == msg.name {
+				if msg.err != nil {
+					m.panels[i].body = msg.err.Error()
+				} else {
+					m.panels[i].body = msg.text
+				}
+				break
+			}
+		}
 
-	case random:
-		m.panels[1].body = fmt.Sprintf("%d", msg)
-		cmd = tickRandom() // Запускаем последующие тики каждые 3 секунды
+		for i, module := range m.modules {
+			if module.Name() == msg.name {
+				cmd = poll(m.modules[i], m.modules[i].Interval())
+			}
+		}
 
-	case weather:
-		m.panels[2].body = string(msg)
-
-	case hardware:
-		m.panels[3].body = string(msg)
-		cmd = tickHardware() // Запускаем последующие тики каждые 5 секунд
 	}
 
 	return m, cmd
@@ -92,7 +119,7 @@ func (m model) View() tea.View {
 
 	rowsCount := (len(m.panels) + m.maxPanelsPerRow - 1) / m.maxPanelsPerRow
 
-	footerHeight := strings.Count(footerStr, "\n")
+	footerHeight := lipgloss.Height(footerStr)
 	colHeight := (m.Height-footerHeight)/rowsCount - panelOverhead
 
 	rem := m.Width % m.maxPanelsPerRow
@@ -107,14 +134,13 @@ func (m model) View() tea.View {
 
 	}
 
-	var panels []string
-	step := 0
-	for i := m.maxPanelsPerRow; i <= len(views); i += m.maxPanelsPerRow {
-		panels = append(panels, lipgloss.JoinHorizontal(lipgloss.Top, views[step:i]...))
-		step += m.maxPanelsPerRow
+	sliced := slicePanels(views, m.maxPanelsPerRow)
+	panels := []string{}
+
+	for _, slice := range sliced {
+		panels = append(panels, lipgloss.JoinHorizontal(lipgloss.Top, slice...))
 	}
 
-	panels = append(panels, lipgloss.JoinHorizontal(lipgloss.Top, views[step:]...))
 	panelsStr := lipgloss.JoinVertical(lipgloss.Top, panels...)
 
 	vStr := lipgloss.JoinVertical(lipgloss.Left, panelsStr, footerStr)
