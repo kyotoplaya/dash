@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -34,13 +38,48 @@ type model struct {
 	time time.Time
 }
 
-func initialModel() model {
-	modules := []Module{
-		weatherModule{},
-		clockModule{},
-		hardwareModule{},
-		randomModule{},
+func loadModules(modules []Module) error {
+
+	err := isDirExists("modules")
+	if err != nil {
+		return err
 	}
+
+	for _, m := range modules {
+		path := filepath.Join("modules", m.Id()+".json")
+		fileData, err := os.ReadFile(path)
+
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				cfg := m.Config()
+
+				data, err := json.MarshalIndent(cfg, "", " ")
+				if err != nil {
+					return err
+				}
+
+				err = os.WriteFile(path, data, 0644)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			return err
+
+		}
+
+		err = json.Unmarshal(fileData, m.Config())
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+
+}
+
+func initialModel(modules []Module) model {
 
 	panels := []panel{}
 	for _, module := range modules {
@@ -151,7 +190,20 @@ func (m model) View() tea.View {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
+	modules := []Module{
+		NewClockModule(),
+		NewWeatherModule(),
+		NewDembelModule(),
+		NewRandomModule(),
+		NewServerModule(),
+		NewHardwareModule(),
+	}
+
+	if err := loadModules(modules); err != nil {
+		log.Fatal(err)
+	}
+
+	p := tea.NewProgram(initialModel(modules))
 	if _, err := p.Run(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

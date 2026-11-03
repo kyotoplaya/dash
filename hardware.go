@@ -9,7 +9,21 @@ import (
 	"time"
 )
 
-type hardwareModule struct{}
+type hardwareConfig struct{}
+
+type hardwareModule struct {
+	cfg hardwareConfig
+}
+
+func NewHardwareModule() Module {
+	return &hardwareModule{
+		cfg: hardwareConfig{},
+	}
+}
+
+func (m *hardwareModule) Config() any {
+	return &m.cfg
+}
 
 func getCpuTemp() (string, error) {
 	psCommand := `
@@ -166,8 +180,9 @@ func getRAMMetrics() (float64, float64, error) {
 	return used, total, nil
 }
 
-func (hardwareModule) Name() string { return "Hardware" }
-func (hardwareModule) Collect() (string, error) {
+func (*hardwareModule) Id() string   { return "hardware" }
+func (*hardwareModule) Name() string { return "Hardware" }
+func (m *hardwareModule) Collect() (string, error) {
 	cpuTemp, err := getCpuTemp()
 	if err != nil {
 		cpuTemp = "N/A"

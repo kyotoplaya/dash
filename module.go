@@ -7,12 +7,13 @@ import (
 )
 
 type Module interface {
+	Id() string
 	Name() string
 	Collect() (string, error)
 	Interval() time.Duration
+	Config() any
 }
 
-// moduleMsg — единственное сообщение для всех модулей.
 type moduleMsg struct {
 	name string
 	text string

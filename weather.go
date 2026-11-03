@@ -7,11 +7,30 @@ import (
 	"time"
 )
 
-type weatherModule struct{}
+type weatherConfig struct {
+	City string `json:"city"`
+}
 
-func (weatherModule) Name() string { return "Weather" }
-func (weatherModule) Collect() (string, error) {
-	url := "https://wttr.in/Oryol?0?Q"
+type weatherModule struct {
+	cfg weatherConfig
+}
+
+// Конструктор для создания модуля и установки дефолтов
+func NewWeatherModule() Module {
+	return &weatherModule{
+		cfg: weatherConfig{City: "Oryol"},
+	}
+}
+
+func (m *weatherModule) Config() any {
+	return &m.cfg
+}
+
+func (*weatherModule) Id() string   { return "weather" }
+func (*weatherModule) Name() string { return "Weather" }
+
+func (m weatherModule) Collect() (string, error) {
+	url := "https://wttr.in/" + m.cfg.City + "?0?Q"
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)
@@ -23,7 +42,6 @@ func (weatherModule) Collect() (string, error) {
 	// Обязательно выставляем User-Agent как у curl, чтобы получить чистый текст
 	req.Header.Set("User-Agent", "curl/7.79.1")
 
-	// Выполняем запрос
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Ошибка выполнения запроса: %v\n", err)
@@ -41,6 +59,6 @@ func (weatherModule) Collect() (string, error) {
 	return string(body), nil
 }
 
-func (weatherModule) Interval() time.Duration {
+func (*weatherModule) Interval() time.Duration {
 	return time.Hour // Обновляем раз в час
 }
